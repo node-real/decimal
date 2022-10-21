@@ -483,9 +483,17 @@ func (d Decimal) Abs() Decimal {
 	}
 }
 
+func (d Decimal) Normalize() Decimal {
+	digits := int32(d.NumDigits())
+	if digits <= 34 {
+		return d
+	}
+	return d.Round(34 - (digits + d.exp))
+}
+
 // Add returns d + d2.
 func (d Decimal) Add(d2 Decimal) Decimal {
-	rd, rd2 := RescalePair(d, d2)
+	rd, rd2 := RescalePair(d.Normalize(), d2.Normalize())
 
 	d3Value := new(big.Int).Add(rd.value, rd2.value)
 	return Decimal{
@@ -496,7 +504,7 @@ func (d Decimal) Add(d2 Decimal) Decimal {
 
 // Sub returns d - d2.
 func (d Decimal) Sub(d2 Decimal) Decimal {
-	rd, rd2 := RescalePair(d, d2)
+	rd, rd2 := RescalePair(d.Normalize(), d2.Normalize())
 
 	d3Value := new(big.Int).Sub(rd.value, rd2.value)
 	return Decimal{
@@ -519,6 +527,8 @@ func (d Decimal) Neg() Decimal {
 func (d Decimal) Mul(d2 Decimal) Decimal {
 	d.ensureInitialized()
 	d2.ensureInitialized()
+	d = d.Normalize()
+	d2 = d2.Normalize()
 
 	expInt64 := int64(d.exp) + int64(d2.exp)
 	if expInt64 > math.MaxInt32 || expInt64 < math.MinInt32 {
@@ -549,7 +559,7 @@ func (d Decimal) Shift(shift int32) Decimal {
 // Div returns d / d2. If it doesn't divide exactly, the result will have
 // DivisionPrecision digits after the decimal point.
 func (d Decimal) Div(d2 Decimal) Decimal {
-	return d.DivRound(d2, int32(DivisionPrecision))
+	return d.Normalize().DivRound(d2.Normalize(), int32(DivisionPrecision))
 }
 
 // QuoRem does division with remainder
